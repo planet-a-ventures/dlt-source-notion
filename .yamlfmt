@@ -1,0 +1,6 @@
+gitignore_excludes: true
+eof_newline: true
+exclude:
+  - .yamllint
+  - .pre-commit-config.yaml
+  - dlt_source_notion/model/spec

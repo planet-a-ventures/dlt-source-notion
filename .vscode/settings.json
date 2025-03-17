@@ -1,0 +1,9 @@
+{
+    "python.testing.pytestArgs": [
+        "--capture=no",
+        "dlt_source_notion"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "debugpy.debugJustMyCode": true,
+}

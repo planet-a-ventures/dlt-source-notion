@@ -1,0 +1,28 @@
+[project]
+name = "dlt-source-notion"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dlt>=1.8.1",
+    "notion-client>=2.3.0",
+]
+dynamic = ["authors", "classifiers", "version", "description"]
+
+[project.optional-dependencies]
+show = [
+    "dlt[duckdb]>=1.8.1",
+    "streamlit>=1.41.1",
+    "watchdog>=6.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
+
+[tool.black]
+include = '.*py$'
+
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
