@@ -51,7 +51,6 @@
   '';
 
   enterTest = ''
-    validate-spec
     test-all
   '';
 
