@@ -29,7 +29,7 @@ def __get_id(obj):
     parallelized=True,
     primary_key="id",
 )
-def users() -> Iterable[TDataItem]:
+def list_users() -> Iterable[TDataItem]:
 
     notion = get_notion_client()
 
@@ -71,7 +71,12 @@ def split_user(user: Dict):
 
 
 @dlt.source(name="notion")
-def source() -> Sequence[DltResource]:
+def source(
+    limit: int = -1,
+) -> Sequence[DltResource]:
+    users = list_users()
+    if limit != -1:
+        users.add_limit(limit)
 
     return users | split_user
 
