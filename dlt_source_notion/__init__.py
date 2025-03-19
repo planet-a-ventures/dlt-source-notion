@@ -17,6 +17,7 @@ from pydantic_api.notion.models import (
     Page,
     PageProperty,
 )
+from dlt.common.normalizers.naming.snake_case import NamingConvention
 
 
 # from notion_client.helpers import iterate_paginated_api
@@ -122,6 +123,8 @@ def split_user(users: List[UserObject]):
 
 page_property_adapter = TypeAdapter(PageProperty)
 
+naming_convention = NamingConvention()
+
 
 @dlt.resource(
     selected=True,
@@ -132,6 +135,7 @@ page_property_adapter = TypeAdapter(PageProperty)
 def database_resource(
     database_id: str,
     property_filter: Callable[[str], bool] = lambda _: True,
+    column_name_projection: Callable[[str], str] = lambda x: x,
 ) -> Iterable[Page]:
 
     client = get_notion_client()
@@ -145,6 +149,18 @@ def database_resource(
     ]
     selected_properties = list(filter(property_filter, all_properties))
 
+    target_key_mapping = {
+        p: naming_convention.normalize_path(column_name_projection(p))
+        for p in selected_properties
+    }
+    target_keys = list(target_key_mapping.values())
+
+    if len(target_keys) != len(set(target_keys)):
+        raise ValueError(
+            "The column name projection function must produce unique column names. Current column names: "
+            + ", ".join(target_keys)
+        )
+
     for pages in iterate_paginated_api(client.databases.query, database_id=database_id):
         for page in pages:
             assert isinstance(page, Page)
@@ -155,41 +171,41 @@ def database_resource(
                 # TODO: remove this cast, once https://github.com/stevieflyer/pydantic-api-models-notion/pull/6 lands
                 prop: PageProperty = page_property_adapter.validate_python(prop_raw)
 
+                target_key = target_key_mapping[selected_property]
+
                 match prop.type:
                     case "title":
-                        row[selected_property] = " ".join(
-                            [t.text.content for t in prop.title]
-                        )
+                        row[target_key] = " ".join([t.text.content for t in prop.title])
                     case "rich_text":
-                        row[selected_property] = " ".join(
+                        row[target_key] = " ".join(
                             [t.text.content for t in prop.rich_text]
                         )
                     case "number":
-                        row[selected_property] = prop.number
+                        row[target_key] = prop.number
                     case "select":
                         if prop.select is None:
-                            row[selected_property] = None
+                            row[target_key] = None
                             continue
-                        row[selected_property] = prop.select.id
+                        row[target_key] = prop.select.id
                     case "multi_select":
-                        row[selected_property] = [s.id for s in prop.multi_select]
+                        row[target_key] = [s.id for s in prop.multi_select]
                     case "date":
                         if prop.date is None:
-                            row[selected_property] = None
+                            row[target_key] = None
                             continue
                         if prop.date.end:
                             # we have a range
-                            row[selected_property] = prop.date
+                            row[target_key] = prop.date
                         else:
-                            row[selected_property] = prop.date.start
+                            row[target_key] = prop.date.start
                     case "people":
-                        row[selected_property] = [p.id for p in prop.people]
+                        row[target_key] = [p.id for p in prop.people]
                     case "last_edited_by":
-                        row[selected_property] = prop.last_edited_by.id
+                        row[target_key] = prop.last_edited_by.id
                     case "last_edited_time":
-                        row[selected_property] = prop.last_edited_time
+                        row[target_key] = prop.last_edited_time
                     case "relation":
-                        row[selected_property] = [r.id for r in prop.relation]
+                        row[target_key] = [r.id for r in prop.relation]
                     case _:
                         # See https://developers.notion.com/reference/page-property-values
                         raise ValueError(
