@@ -16,6 +16,8 @@ from pydantic_api.notion.models import (
     Database,
     Page,
     PageProperty,
+    # TODO: replace this with `BaseDatabaseProperty` when https://github.com/stevieflyer/pydantic-api-models-notion/pull/8 lands
+    DatabaseProperty
 )
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 
@@ -134,23 +136,19 @@ naming_convention = NamingConvention()
 )
 def database_resource(
     database_id: str,
-    property_filter: Callable[[str], bool] = lambda _: True,
-    column_name_projection: Callable[[str], str] = lambda x: x,
+    property_filter: Callable[[DatabaseProperty], bool] = lambda _: True,
+    column_name_projection: Callable[[DatabaseProperty], str] = lambda x: naming_convention.normalize_path(x.name),
 ) -> Iterable[Page]:
 
     client = get_notion_client()
 
     db: Database = client.databases.retrieve(database_id=database_id)
 
-    all_properties = [
-        p.name
-        for p in db.properties.values()
-        if p.name is not None and isinstance(p.name, str)
-    ]
+    all_properties = list(db.properties.values())
     selected_properties = list(filter(property_filter, all_properties))
 
     target_key_mapping = {
-        p: naming_convention.normalize_path(column_name_projection(p))
+        p.name: column_name_projection(p)
         for p in selected_properties
     }
     target_keys = list(target_key_mapping.values())
@@ -167,11 +165,12 @@ def database_resource(
 
             row = {}
             for selected_property in selected_properties:
-                prop_raw = page.properties[selected_property]
+                selected_key = selected_property.name
+                prop_raw = page.properties[selected_key]
                 # TODO: remove this cast, once https://github.com/stevieflyer/pydantic-api-models-notion/pull/6 lands
                 prop: PageProperty = page_property_adapter.validate_python(prop_raw)
 
-                target_key = target_key_mapping[selected_property]
+                target_key = target_key_mapping[selected_key]
 
                 match prop.type:
                     case "title":
