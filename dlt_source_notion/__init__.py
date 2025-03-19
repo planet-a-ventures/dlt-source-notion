@@ -40,7 +40,7 @@ class Table(StrEnum):
     BOTS = "bots"
 
 
-def use_id(entity: User, **kwargs) -> dict:
+def use_id(entity: User | Page | Database, **kwargs) -> dict:
     return pydantic_model_dump(entity, **kwargs) | {"_dlt_id": __get_id(entity)}
 
 
@@ -160,7 +160,7 @@ def database_resource(
                 case _:
                     # See https://developers.notion.com/reference/page-property-values
                     raise ValueError(f"Unsupported property type: {prop.type}")
-        yield pydantic_model_dump(page, exclude=["properties", "object"]) | row
+        yield use_id(page, exclude=["properties", "object"]) | row
 
 
 @dlt.source(name="notion")
