@@ -3,8 +3,9 @@
 from enum import StrEnum
 import json
 from typing import Any, Callable, Generator, Iterable, List, Sequence, TypeVar
+from uuid import UUID
 import dlt
-from pydantic import TypeAdapter
+from pydantic import Field, TypeAdapter
 
 from dlt.common import json
 from dlt.common.json import JsonSerializable
@@ -17,15 +18,25 @@ from pydantic_api.notion.models import (
     Page,
     PageProperty,
     # TODO: replace this with `BaseDatabaseProperty` when https://github.com/stevieflyer/pydantic-api-models-notion/pull/8 lands
-    DatabaseProperty,
+    DatabaseProperty as BaseDatabaseProperty,
+    SelectOption,
+    # MultiSelectPropertyConfig,
+    # SelectPropertyConfig,
 )
 from dlt.common.normalizers.naming.snake_case import NamingConvention
-
 
 # from notion_client.helpers import iterate_paginated_api
 from pydantic import AnyUrl, BaseModel
 
 from .client import get_notion_client
+
+import hashlib
+
+
+def short_hash(input: str | UUID, digest_size: int = 4) -> str:
+    # Using BLAKE2b with an x-byte digest (64 bits)
+    h = hashlib.blake2b(str(input).encode(), digest_size=digest_size)
+    return h.hexdigest()
 
 
 def anyurl_encoder(obj: Any) -> JsonSerializable:
@@ -128,6 +139,13 @@ page_property_adapter = TypeAdapter(PageProperty)
 
 naming_convention = NamingConvention()
 
+DatabaseProperty = BaseDatabaseProperty
+
+ColumnNameProjection = Callable[[DatabaseProperty, Callable[[str], str]], str | None]
+"""
+A function that determines the resulting column name for a given property. Return `None` to exclude the property. Fails if the resulting column names are not unique.
+"""
+
 
 @dlt.resource(
     selected=True,
@@ -137,18 +155,19 @@ naming_convention = NamingConvention()
 )
 def database_resource(
     database_id: str,
-    property_filter: Callable[[DatabaseProperty], bool] = lambda _: True,
-    column_name_projection: Callable[
-        [DatabaseProperty], str
-    ] = lambda x: naming_convention.normalize_path(x.name),
+    column_name_projection: ColumnNameProjection,
 ) -> Iterable[Page]:
 
     client = get_notion_client()
 
     db: Database = client.databases.retrieve(database_id=database_id)
 
+    db_table_name = naming_convention.normalize_path(
+        "database_" + db.plain_text_title + "_" + short_hash(db.id)
+    )
+
     yield dlt.mark.with_hints(
-        item={"title": db.plain_text_title}
+        item={"title": db.plain_text_title, "db_table_name": db_table_name}
         | use_id(db, exclude=["object", "properties", "title"]),
         hints=dlt.mark.make_hints(
             table_name=Table.DATABASES.value,
@@ -160,17 +179,38 @@ def database_resource(
     )
 
     all_properties = list(db.properties.values())
-    selected_properties = list(filter(property_filter, all_properties))
+
+    for p in all_properties:
+        if p.type not in ["multi_select", "select"]:
+            continue
+
+        # data: MultiSelectPropertyConfig | SelectPropertyConfig = getattr(p, p.type)
+        data = getattr(p, p.type)
+        if data is None:
+            continue
+        for option in data.options:
+            yield dlt.mark.with_hints(
+                item=use_id(option, exclude=["object", "color"]),
+                hints=dlt.mark.make_hints(
+                    table_name="options_" + p.name + "_" + short_hash(p.id),
+                    primary_key="id",
+                    write_disposition="merge",
+                ),
+            )
 
     target_key_mapping = {
-        p.name: column_name_projection(p) for p in selected_properties
+        p.name: proj
+        for p in all_properties
+        if (proj := column_name_projection(p, naming_convention.normalize_path))
+        is not None
     }
-    target_keys = list(target_key_mapping.values())
+    target_column_names = list(target_key_mapping.values())
+    selected_properties = list(target_key_mapping.keys())
 
-    if len(target_keys) != len(set(target_keys)):
+    if len(target_column_names) != len(set(target_column_names)):
         raise ValueError(
             "The column name projection function must produce unique column names. Current column names: "
-            + ", ".join(target_keys)
+            + ", ".join(target_column_names)
         )
 
     for pages in iterate_paginated_api(client.databases.query, database_id=database_id):
@@ -178,8 +218,7 @@ def database_resource(
             assert isinstance(page, Page)
 
             row = {}
-            for selected_property in selected_properties:
-                selected_key = selected_property.name
+            for selected_key in selected_properties:
                 prop_raw = page.properties[selected_key]
                 # TODO: remove this cast, once https://github.com/stevieflyer/pydantic-api-models-notion/pull/6 lands
                 prop: PageProperty = page_property_adapter.validate_python(prop_raw)
@@ -188,9 +227,9 @@ def database_resource(
 
                 match prop.type:
                     case "title":
-                        row[target_key] = " ".join([t.text.content for t in prop.title])
+                        row[target_key] = "".join([t.text.content for t in prop.title])
                     case "rich_text":
-                        row[target_key] = " ".join(
+                        row[target_key] = "".join(
                             [t.text.content for t in prop.rich_text]
                         )
                     case "number":
@@ -199,9 +238,11 @@ def database_resource(
                         if prop.select is None:
                             row[target_key] = None
                             continue
-                        row[target_key] = prop.select.id
+                        row[target_key + "_" + short_hash(prop.id)] = prop.select.id
                     case "multi_select":
-                        row[target_key] = [s.id for s in prop.multi_select]
+                        row[target_key + "_" + short_hash(prop.id)] = [
+                            s.id for s in prop.multi_select
+                        ]
                     case "date":
                         if prop.date is None:
                             row[target_key] = None
@@ -212,35 +253,67 @@ def database_resource(
                         else:
                             row[target_key] = prop.date.start
                     case "people":
-                        row[target_key] = [p.id for p in prop.people]
+                        row[target_key + "_users"] = [p.id for p in prop.people]
                     case "last_edited_by":
                         row[target_key] = prop.last_edited_by.id
                     case "last_edited_time":
                         row[target_key] = prop.last_edited_time
                     case "relation":
-                        row[target_key] = [r.id for r in prop.relation]
+                        row[target_key + "_relations"] = [r.id for r in prop.relation]
                     case _:
                         # See https://developers.notion.com/reference/page-property-values
                         raise ValueError(
                             f"Unsupported property type: {prop.type}; Please open a pull request."
                         )
-            yield use_id(page, exclude=["properties", "object"]) | row
+            yield dlt.mark.with_hints(
+                item=use_id(page, exclude=["properties"]) | row,
+                hints=dlt.mark.make_hints(
+                    table_name=db_table_name,
+                    primary_key="id",
+                    write_disposition="merge",
+                ),
+                # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
+                create_table_variant=True,
+            )
+
+
+class DatabaseResourceBase:
+    column_name_projection: ColumnNameProjection = lambda x, normalize: normalize(
+        x.name
+    )
+
+
+class DatabaseResource(DatabaseResourceBase):
+    def __init__(
+        self, database_id: str, column_name_projection: ColumnNameProjection = None
+    ):
+        self.database_id = database_id
+        if column_name_projection is not None:
+            self.column_name_projection = column_name_projection
+
+    def get_resource(self):
+        return database_resource(
+            database_id=self.database_id,
+            column_name_projection=self.column_name_projection,
+        )
+
+    def __str__(self):
+        return f"DatabaseResource(database_id={self.database_id})"
 
 
 @dlt.source(name="notion")
 def source(
     limit: int = -1,
+    database_resources: List[DatabaseResource] = Field(default_factory=list),
 ) -> Sequence[DltResource]:
     users = list_users()
     if limit != -1:
         users.add_limit(limit)
 
-    db_rs = database_resource(database_id="...")
-
     return (
         users | split_user,
-        db_rs,
+        *[d.get_resource() for d in database_resources],
     )
 
 
-__all__ = ["source", "database_resource"]
+__all__ = ["source", "DatabaseResource", "ColumnNameProjection", "DatabaseProperty"]

@@ -15,6 +15,12 @@ Currently loads the following data:
 | -- | -- |
 | `persons` | Items of the `user` model of type `person` |
 | `bots` | Items of the `user` model of type `bot` |
+| `database_<name>_<shorthash>` | The database content (pages) of a given database. Columns are all global page columns + selected columns of properties |
+| `databases` | All metadata of each loaded database. Has the title and a reference to the database table as well. |
+| `options_<name>_<shorthash>` | All options of a `select` or `multi_select` in one of the loaded databases. |
+
+`<shorthash>` refers to the hashed `id` of an entity.
+The hash is a 4-bit BLAKE2b hash.
 
 ## Why are you not using the `dlt-hub/verified-sources` notion source / Differences
 

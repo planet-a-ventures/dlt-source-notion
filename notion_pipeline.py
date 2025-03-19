@@ -1,5 +1,6 @@
+from typing import Callable
 import dlt
-from dlt_source_notion import source
+from dlt_source_notion import source, DatabaseResource, DatabaseProperty
 
 DEV_MODE = True
 
