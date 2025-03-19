@@ -166,8 +166,26 @@ def database_resource(
         "database_" + db.plain_text_title + "_" + short_hash(db.id)
     )
 
+    all_properties = list(db.properties.values())
+
+    target_key_mapping = {
+        p.name: proj
+        for p in all_properties
+        if (proj := column_name_projection(p, naming_convention.normalize_path))
+        is not None
+    }
+
+    properties = [
+        {"column": column, "label": label}
+        for label, column in target_key_mapping.items()
+    ]
+
     yield dlt.mark.with_hints(
-        item={"title": db.plain_text_title, "db_table_name": db_table_name}
+        item={
+            "title": db.plain_text_title,
+            "db_table_name": db_table_name,
+            "properties": properties,
+        }
         | use_id(db, exclude=["object", "properties", "title"]),
         hints=dlt.mark.make_hints(
             table_name=Table.DATABASES.value,
@@ -177,8 +195,6 @@ def database_resource(
         # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
         create_table_variant=True,
     )
-
-    all_properties = list(db.properties.values())
 
     for p in all_properties:
         if p.type not in ["multi_select", "select"]:
@@ -198,12 +214,6 @@ def database_resource(
                 ),
             )
 
-    target_key_mapping = {
-        p.name: proj
-        for p in all_properties
-        if (proj := column_name_projection(p, naming_convention.normalize_path))
-        is not None
-    }
     target_column_names = list(target_key_mapping.values())
     selected_properties = list(target_key_mapping.keys())
 
