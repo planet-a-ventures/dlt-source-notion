@@ -19,7 +19,6 @@ from pydantic_api.notion.models import (
     PageProperty,
     # TODO: replace this with `BaseDatabaseProperty` when https://github.com/stevieflyer/pydantic-api-models-notion/pull/8 lands
     DatabaseProperty as BaseDatabaseProperty,
-    SelectOption,
     # MultiSelectPropertyConfig,
     # SelectPropertyConfig,
 )
