@@ -17,7 +17,7 @@ from pydantic_api.notion.models import (
     Page,
     PageProperty,
     # TODO: replace this with `BaseDatabaseProperty` when https://github.com/stevieflyer/pydantic-api-models-notion/pull/8 lands
-    DatabaseProperty
+    DatabaseProperty,
 )
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 
@@ -48,6 +48,7 @@ def pydantic_model_dump(model: BaseModel, **kwargs):
 class Table(StrEnum):
     PERSONS = "persons"
     BOTS = "bots"
+    DATABASES = "databases"
 
 
 def use_id(entity: UserObject, **kwargs) -> dict:
@@ -137,19 +138,32 @@ naming_convention = NamingConvention()
 def database_resource(
     database_id: str,
     property_filter: Callable[[DatabaseProperty], bool] = lambda _: True,
-    column_name_projection: Callable[[DatabaseProperty], str] = lambda x: naming_convention.normalize_path(x.name),
+    column_name_projection: Callable[
+        [DatabaseProperty], str
+    ] = lambda x: naming_convention.normalize_path(x.name),
 ) -> Iterable[Page]:
 
     client = get_notion_client()
 
     db: Database = client.databases.retrieve(database_id=database_id)
 
+    yield dlt.mark.with_hints(
+        item={"title": db.plain_text_title}
+        | use_id(db, exclude=["object", "properties", "title"]),
+        hints=dlt.mark.make_hints(
+            table_name=Table.DATABASES.value,
+            primary_key="id",
+            write_disposition="merge",
+        ),
+        # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
+        create_table_variant=True,
+    )
+
     all_properties = list(db.properties.values())
     selected_properties = list(filter(property_filter, all_properties))
 
     target_key_mapping = {
-        p.name: column_name_projection(p)
-        for p in selected_properties
+        p.name: column_name_projection(p) for p in selected_properties
     }
     target_keys = list(target_key_mapping.values())
 

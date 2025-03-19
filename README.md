@@ -26,6 +26,8 @@ has a few drawbacks:
   Once you make changes to it, it effectively becomes a fork,
   making it hard to update after the fact.
 - This makes use of a preexisting client implementation
+- And Pydantic types for Notion entities,
+  which makes this implementation a lot more stable
 
 ## Usage
 
