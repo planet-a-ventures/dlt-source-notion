@@ -5,6 +5,8 @@ requires-python = ">=3.12"
 dependencies = [
     "dlt>=1.8.1",
     "notion-client>=2.3.0",
+    "pydantic-extra-types>=2.10.3",
+    "pydantic>=2.10.6",
 ]
 dynamic = ["authors", "classifiers", "version", "description"]
 

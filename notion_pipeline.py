@@ -9,7 +9,7 @@ def load_notion_data() -> None:
         pipeline_name="notion_pipeline", destination="duckdb", dev_mode=DEV_MODE
     )
     data = source(
-        limit=-1 if not DEV_MODE else 1,
+        # limit=-1 if not DEV_MODE else 1,
     )
     info = pipeline.run(
         data,

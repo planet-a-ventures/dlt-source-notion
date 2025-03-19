@@ -179,3 +179,5 @@ secrets.toml
 .DS_Store
 
 .python-version
+
+/*.json
