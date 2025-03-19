@@ -2,20 +2,27 @@
 
 from enum import StrEnum
 import json
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Generator, Iterable, List, Sequence, TypeVar
 import dlt
+from pydantic import TypeAdapter
 
 from dlt.common import json
 from dlt.common.json import JsonSerializable
-from dlt.sources import DltResource, TDataItem
+from dlt.sources import DltResource
+from pydantic_api.notion.models import (
+    UserObject,
+    StartCursor,
+    NotionPaginatedData,
+    Database,
+    Page,
+    PageProperty,
+)
 
 
-from notion_client.helpers import iterate_paginated_api
+# from notion_client.helpers import iterate_paginated_api
 from pydantic import AnyUrl, BaseModel
 
 from .client import get_notion_client
-from .model.notion_2022_06_28 import Database, Page, User
-from .type_adapters import user_adapter, object_adapter
 
 
 def anyurl_encoder(obj: Any) -> JsonSerializable:
@@ -40,7 +47,7 @@ class Table(StrEnum):
     BOTS = "bots"
 
 
-def use_id(entity: User | Page | Database, **kwargs) -> dict:
+def use_id(entity: UserObject, **kwargs) -> dict:
     return pydantic_model_dump(entity, **kwargs) | {"_dlt_id": __get_id(entity)}
 
 
@@ -50,48 +57,70 @@ def __get_id(obj):
     return getattr(obj, "id", None)
 
 
+R = TypeVar("R", bound=BaseModel)
+
+
+def iterate_paginated_api(
+    function: Callable[..., NotionPaginatedData[R]], **kwargs: Any
+) -> Generator[List[R], None, None]:
+    """Return an iterator over the results of any paginated Notion API."""
+    next_cursor: StartCursor = kwargs.pop("start_cursor", None)
+
+    while True:
+        response = function(**kwargs, start_cursor=next_cursor)
+        yield response.results
+
+        next_cursor = response.next_cursor
+        if not response.has_more or not next_cursor:
+            return
+
+
 @dlt.resource(
     selected=True,
     parallelized=True,
     primary_key="id",
 )
-def list_users() -> Iterable[TDataItem]:
+def list_users() -> Iterable[UserObject]:
+    client = get_notion_client()
 
-    notion = get_notion_client()
-
-    for user in iterate_paginated_api(notion.users.list):
-        yield user_adapter.validate_python(user)
+    yield from iterate_paginated_api(client.users.list)
 
 
 @dlt.transformer(
     parallelized=True,
     name="users",
 )
-def split_user(user: User):
+def split_user(users: List[UserObject]):
+    """
+    Split users into two tables: persons and bots.
+    """
+    for user in users:
+        match user.type:
+            case "bot":
+                yield dlt.mark.with_hints(
+                    item=use_id(user, exclude=["type", "object"]),
+                    hints=dlt.mark.make_hints(
+                        table_name=Table.BOTS.value,
+                        primary_key="id",
+                        write_disposition="merge",
+                    ),
+                    # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
+                    create_table_variant=True,
+                )
+            case "person":
+                yield dlt.mark.with_hints(
+                    item=use_id(user, exclude=["bot", "type", "object"]),
+                    hints=dlt.mark.make_hints(
+                        table_name=Table.PERSONS.value,
+                        primary_key="id",
+                        write_disposition="merge",
+                    ),
+                    # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
+                    create_table_variant=True,
+                )
 
-    match user.type:
-        case "bot":
-            yield dlt.mark.with_hints(
-                item=use_id(user, exclude=["type", "object"]),
-                hints=dlt.mark.make_hints(
-                    table_name=Table.BOTS.value,
-                    primary_key="id",
-                    write_disposition="merge",
-                ),
-                # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
-                create_table_variant=True,
-            )
-        case "person":
-            yield dlt.mark.with_hints(
-                item=use_id(user, exclude=["bot", "type", "object"]),
-                hints=dlt.mark.make_hints(
-                    table_name=Table.PERSONS.value,
-                    primary_key="id",
-                    write_disposition="merge",
-                ),
-                # needs to be a variant due to https://github.com/dlt-hub/dlt/pull/2109
-                create_table_variant=True,
-            )
+
+page_property_adapter = TypeAdapter(PageProperty)
 
 
 @dlt.resource(
@@ -102,65 +131,71 @@ def split_user(user: User):
 )
 def database_resource(
     database_id: str,
-) -> Iterable[TDataItem]:
+    property_filter: Callable[[str], bool] = lambda _: True,
+) -> Iterable[Page]:
 
-    notion = get_notion_client()
+    client = get_notion_client()
 
-    db_raw = notion.databases.retrieve(database_id)
-    db: Database = object_adapter.validate_python(db_raw)
-    assert isinstance(db, Database)
+    db: Database = client.databases.retrieve(database_id=database_id)
 
-    selected_properties = [p.name for p in db.properties.values() if p.name is not None]
+    all_properties = [
+        p.name
+        for p in db.properties.values()
+        if p.name is not None and isinstance(p.name, str)
+    ]
+    selected_properties = list(filter(property_filter, all_properties))
 
-    for page_raw in iterate_paginated_api(
-        notion.databases.query, database_id=database_id
-    ):
-        page: Page = object_adapter.validate_python(page_raw)
-        assert isinstance(page, Page)
+    for pages in iterate_paginated_api(client.databases.query, database_id=database_id):
+        for page in pages:
+            assert isinstance(page, Page)
 
-        row = {}
-        for selected_property in selected_properties:
-            prop = page.properties[selected_property]
+            row = {}
+            for selected_property in selected_properties:
+                prop_raw = page.properties[selected_property]
+                # TODO: remove this cast, once https://github.com/stevieflyer/pydantic-api-models-notion/pull/6 lands
+                prop: PageProperty = page_property_adapter.validate_python(prop_raw)
 
-            match prop.type:
-                case "title":
-                    row[selected_property] = " ".join(
-                        [t.text.content for t in prop.title]
-                    )
-                case "rich_text":
-                    row[selected_property] = " ".join(
-                        [t.text.content for t in prop.rich_text]
-                    )
-                case "number":
-                    row[selected_property] = prop.number
-                case "select":
-                    if prop.select is None:
-                        row[selected_property] = None
-                        continue
-                    row[selected_property] = prop.select.id
-                case "multi_select":
-                    row[selected_property] = [s.id for s in prop.multi_select]
-                case "date":
-                    if prop.date is None:
-                        row[selected_property] = None
-                        continue
-                    if prop.date.end:
-                        # we have a range
-                        row[selected_property] = prop.date
-                    else:
-                        row[selected_property] = prop.date.start
-                case "people":
-                    row[selected_property] = [p.id for p in prop.people]
-                case "last_edited_by":
-                    row[selected_property] = prop.last_edited_by.id
-                case "last_edited_time":
-                    row[selected_property] = prop.last_edited_time
-                case "relation":
-                    row[selected_property] = [r.id for r in prop.relation]
-                case _:
-                    # See https://developers.notion.com/reference/page-property-values
-                    raise ValueError(f"Unsupported property type: {prop.type}")
-        yield use_id(page, exclude=["properties", "object"]) | row
+                match prop.type:
+                    case "title":
+                        row[selected_property] = " ".join(
+                            [t.text.content for t in prop.title]
+                        )
+                    case "rich_text":
+                        row[selected_property] = " ".join(
+                            [t.text.content for t in prop.rich_text]
+                        )
+                    case "number":
+                        row[selected_property] = prop.number
+                    case "select":
+                        if prop.select is None:
+                            row[selected_property] = None
+                            continue
+                        row[selected_property] = prop.select.id
+                    case "multi_select":
+                        row[selected_property] = [s.id for s in prop.multi_select]
+                    case "date":
+                        if prop.date is None:
+                            row[selected_property] = None
+                            continue
+                        if prop.date.end:
+                            # we have a range
+                            row[selected_property] = prop.date
+                        else:
+                            row[selected_property] = prop.date.start
+                    case "people":
+                        row[selected_property] = [p.id for p in prop.people]
+                    case "last_edited_by":
+                        row[selected_property] = prop.last_edited_by.id
+                    case "last_edited_time":
+                        row[selected_property] = prop.last_edited_time
+                    case "relation":
+                        row[selected_property] = [r.id for r in prop.relation]
+                    case _:
+                        # See https://developers.notion.com/reference/page-property-values
+                        raise ValueError(
+                            f"Unsupported property type: {prop.type}; Please open a pull request."
+                        )
+            yield use_id(page, exclude=["properties", "object"]) | row
 
 
 @dlt.source(name="notion")
