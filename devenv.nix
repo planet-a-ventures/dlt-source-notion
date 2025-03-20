@@ -6,15 +6,19 @@
   ...
 }:
 
+let
+  pkgs-unstable = import inputs.nixpkgs-unstable { system = pkgs.stdenv.system; };
+in
 {
   packages = [
     pkgs.git
     pkgs.bash
+    pkgs.python312Packages.setuptools
   ];
 
   languages.python.enable = true;
   languages.python.uv.enable = true;
-  languages.python.uv.package = pkgs.uv;
+  languages.python.uv.package = pkgs-unstable.python312Packages.uv;
   languages.python.uv.sync.enable = true;
   languages.python.uv.sync.allExtras = true;
   languages.python.venv.enable = true;
