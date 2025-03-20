@@ -1,14 +1,18 @@
 [project]
 name = "dlt-source-notion"
-readme = "README.md"
+version = "0.0.2"
+description = "A DLT source for notion"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+    { name = "Planet A GmbH", email = "dev@planet-a.com" }
+]
 requires-python = ">=3.12"
 dependencies = [
     "dlt>=1.8.1",
     "pydantic-api-sdk-notion>=0.0.34",
     "pydantic>=2.10.6",
-    "pydantic-api-models-notion",
+    "pydantic-api-models-notion @ git+https://github.com/stevieflyer/pydantic-api-models-notion.git@050999bc3817422a11edb79835dcd1b48314ab04",
 ]
-dynamic = ["authors", "classifiers", "version", "description"]
 
 [project.optional-dependencies]
 show = [
@@ -29,5 +33,11 @@ include = '.*py$'
 remove-all-unused-imports = true
 remove-unused-variables = true
 
-[tool.uv.sources]
-pydantic-api-models-notion = { git = "https://github.com/stevieflyer/pydantic-api-models-notion.git", rev = "050999bc3817422a11edb79835dcd1b48314ab04" }
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
