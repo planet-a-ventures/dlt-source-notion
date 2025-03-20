@@ -27,7 +27,7 @@ def load_notion_data() -> None:
 
     data = source(
         limit=-1 if not DEV_MODE else 1,
-        databases=[my_db],
+        database_resources=[my_db],
     )
     info = pipeline.run(
         data,

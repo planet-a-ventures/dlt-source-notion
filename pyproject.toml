@@ -6,6 +6,7 @@ dependencies = [
     "dlt>=1.8.1",
     "pydantic-api-sdk-notion>=0.0.34",
     "pydantic>=2.10.6",
+    "pydantic-api-models-notion",
 ]
 dynamic = ["authors", "classifiers", "version", "description"]
 
@@ -27,3 +28,6 @@ include = '.*py$'
 [tool.autoflake]
 remove-all-unused-imports = true
 remove-unused-variables = true
+
+[tool.uv.sources]
+pydantic-api-models-notion = { git = "https://github.com/stevieflyer/pydantic-api-models-notion.git", rev = "050999bc3817422a11edb79835dcd1b48314ab04" }
