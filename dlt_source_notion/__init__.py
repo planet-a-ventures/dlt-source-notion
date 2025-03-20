@@ -17,10 +17,9 @@ from pydantic_api.notion.models import (
     Database,
     Page,
     PageProperty,
-    # TODO: replace this with `BaseDatabaseProperty` when https://github.com/stevieflyer/pydantic-api-models-notion/pull/8 lands
-    DatabaseProperty as BaseDatabaseProperty,
-    # MultiSelectPropertyConfig,
-    # SelectPropertyConfig,
+    BaseDatabaseProperty,
+    MultiSelectPropertyConfig,
+    SelectPropertyConfig,
 )
 from dlt.common.normalizers.naming.snake_case import NamingConvention
 
@@ -199,10 +198,7 @@ def database_resource(
         if p.type not in ["multi_select", "select"]:
             continue
 
-        # data: MultiSelectPropertyConfig | SelectPropertyConfig = getattr(p, p.type)
-        data = getattr(p, p.type)
-        if data is None:
-            continue
+        data: MultiSelectPropertyConfig | SelectPropertyConfig = getattr(p, p.type)
         for option in data.options:
             yield dlt.mark.with_hints(
                 item=use_id(option, exclude=["object", "color"]),
@@ -228,10 +224,7 @@ def database_resource(
 
             row = {}
             for selected_key in selected_properties:
-                prop_raw = page.properties[selected_key]
-                # TODO: remove this cast, once https://github.com/stevieflyer/pydantic-api-models-notion/pull/6 lands
-                prop: PageProperty = page_property_adapter.validate_python(prop_raw)
-
+                prop = page.properties[selected_key]
                 target_key = target_key_mapping[selected_key]
 
                 match prop.type:
