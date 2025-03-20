@@ -26,7 +26,8 @@ in
 
   git-hooks.hooks = {
     shellcheck.enable = true;
-    black.enable = true;
+    ruff.enable = true;
+    ruff-format.enable = true;
     typos.enable = true;
     yamllint.enable = true;
     yamlfmt.enable = true;
@@ -41,7 +42,6 @@ in
       ]
     );
     markdownlint.enable = true;
-    autoflake.enable = true;
   };
 
   scripts.format.exec = ''

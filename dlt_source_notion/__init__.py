@@ -1,7 +1,6 @@
 """A source loading entities and lists from notion  (notion.com)"""
 
 from enum import StrEnum
-import json
 from typing import Any, Callable, Generator, Iterable, List, Sequence, TypeVar
 from uuid import UUID
 import dlt
@@ -155,7 +154,6 @@ def database_resource(
     database_id: str,
     column_name_projection: ColumnNameProjection,
 ) -> Iterable[Page]:
-
     client = get_notion_client()
 
     db: Database = client.databases.retrieve(database_id=database_id)
