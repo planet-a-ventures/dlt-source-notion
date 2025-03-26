@@ -11,7 +11,17 @@ dependencies = [
     "dlt>=1.8.1",
     "pydantic-api-sdk-notion>=0.0.34",
     "pydantic>=2.10.6",
-    "pydantic-api-models-notion @ git+https://github.com/stevieflyer/pydantic-api-models-notion.git@050999bc3817422a11edb79835dcd1b48314ab04",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+[tool.uv]
+override-dependencies = [
+    "pydantic-api-models-notion>=0.0.20",
 ]
 
 [project.optional-dependencies]
@@ -24,12 +34,6 @@ show = [
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
-]
-
-classifiers = [
-    "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
 ]
 
 [tool.setuptools.packages.find]
