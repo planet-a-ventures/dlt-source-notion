@@ -1,6 +1,6 @@
 [project]
 name = "dlt-source-notion"
-version = "0.0.3"
+version = "0.0.4"
 description = "A DLT source for notion"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [
@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "dlt>=1.8.1",
-    "pydantic-api-sdk-notion>=0.0.34",
+    "pydantic-api-sdk-notion>=0.0.35",
     "pydantic>=2.10.6",
 ]
 
@@ -17,11 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent"
-]
-
-[tool.uv]
-override-dependencies = [
-    "pydantic-api-models-notion>=0.0.20",
 ]
 
 [project.optional-dependencies]
