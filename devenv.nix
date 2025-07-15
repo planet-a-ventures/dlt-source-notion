@@ -26,6 +26,9 @@ in
 
   git-hooks.hooks = {
     shellcheck.enable = true;
+    shellcheck.excludes = [
+      ".envrc"
+    ];
     ruff.enable = true;
     ruff-format.enable = true;
     typos.enable = true;
