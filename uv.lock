@@ -208,7 +208,7 @@ requires-dist = [
     { name = "dlt", specifier = ">=1.8.1" },
     { name = "dlt", extras = ["duckdb"], marker = "extra == 'show'", specifier = ">=1.8.1" },
     { name = "pydantic", specifier = ">=2.10.6" },
-    { name = "pydantic-api-sdk-notion", specifier = ">=0.0.35" },
+    { name = "pydantic-api-sdk-notion", specifier = ">=0.0.36" },
     { name = "streamlit", marker = "extra == 'show'", specifier = ">=1.41.1" },
     { name = "watchdog", marker = "extra == 'show'", specifier = ">=6.0.0" },
 ]
@@ -847,28 +847,28 @@ wheels = [
 
 [[package]]
 name = "pydantic-api-models-notion"
-version = "0.0.20"
+version = "0.0.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "emoji" },
     { name = "pydantic-api-models" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/64/e7/bb51aaaa8484b66046e74afb8debe6cce1afe6132af1d7dab4d31a3e610a/pydantic_api_models_notion-0.0.20.tar.gz", hash = "sha256:212c77be0f0ed0c94349147d056bf6d65612966837b8fb2e4d8ac581398000e9", size = 26297, upload-time = "2025-03-26T13:38:42.626Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/6d/1da4ace68d69e62d181423a4cefd09246564f6feb75e8f6eb7f7fdca4667/pydantic_api_models_notion-0.0.22.tar.gz", hash = "sha256:163f18f7f57bf98be173e13c3b9c72384077bcedfc7e4b6081939706f1836ab4", size = 25620, upload-time = "2025-07-15T14:22:50.779Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/a6/96eab73ddc50727b01c1dde1b96e2cce74891bd7aa79c45d12677d07b9dd/pydantic_api_models_notion-0.0.20-py3-none-any.whl", hash = "sha256:0ec2bb8a8914eb9a5d14905b7a3937e8c68437a955d88bff6c5bdb9308268ccf", size = 40008, upload-time = "2025-03-26T13:38:41.46Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/d6/8a7f62e81fff78e8f8b3605bdeac8698ad664a9d7197a60c23625951af2b/pydantic_api_models_notion-0.0.22-py3-none-any.whl", hash = "sha256:0c7d90eebac9d9b0139d4088065627f23e86659d0f65bb4cfcb79be69ba0f1b2", size = 40136, upload-time = "2025-07-15T14:22:49.339Z" },
 ]
 
 [[package]]
 name = "pydantic-api-sdk-notion"
-version = "0.0.35"
+version = "0.0.36"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "notion-client" },
     { name = "pydantic-api-models-notion" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/f6/0bf22aeaa722ca746b40663be874f10c08f6333aa12c9a284bf64a7d3d8f/pydantic_api_sdk_notion-0.0.35.tar.gz", hash = "sha256:62f6f4b72840d8ebe1c9e3e350657523d37814088215b2f9742bb84480ee0ef3", size = 10968, upload-time = "2025-03-31T08:38:27.031Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/e1/32329f834a693dc147d3cceb5ae92f6806f206df93e10d30624c032ae68e/pydantic_api_sdk_notion-0.0.36.tar.gz", hash = "sha256:41ad71733eb2cc0ad1cc17ea589e4238ef589f45c25d6d8d9bad3db3b0ba8a39", size = 10608, upload-time = "2025-07-15T15:17:57.76Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/cc/1f58919e47f8351cc29a1664fe95bd9e1431187d996aa868bcd47cd578eb/pydantic_api_sdk_notion-0.0.35-py3-none-any.whl", hash = "sha256:5526314b1e33082446ccbb7bd2af438836e29cfb7e9f95ae535bb12512ca9165", size = 15604, upload-time = "2025-03-31T08:38:25.55Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/9a/ba72dee62a28ba7672775bc0460ca231d984979727cbddfcf2cce64ee439/pydantic_api_sdk_notion-0.0.36-py3-none-any.whl", hash = "sha256:e7bc24f60b9a5a2bbe107ee97624e8f6f69b601cb9491bb1badeff326a58180a", size = 15610, upload-time = "2025-07-15T15:17:56.585Z" },
 ]
 
 [[package]]

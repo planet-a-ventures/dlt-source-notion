@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "dlt>=1.8.1",
-    "pydantic-api-sdk-notion>=0.0.35",
+    "pydantic-api-sdk-notion>=0.0.36",
     "pydantic>=2.10.6",
 ]
 
