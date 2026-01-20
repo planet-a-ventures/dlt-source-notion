@@ -144,12 +144,6 @@ A function that determines the resulting column name for a given property. Retur
 """
 
 
-@dlt.resource(
-    selected=True,
-    parallelized=True,
-    primary_key="id",
-    max_table_nesting=1,
-)
 def database_resource(
     database_id: str,
     column_name_projection: ColumnNameProjection,
@@ -292,12 +286,17 @@ class DatabaseResource(DatabaseResourceBase):
             self.column_name_projection = column_name_projection
 
     def get_resource(self):
-        res = database_resource(
+        return dlt.resource(
+            database_resource,
+            name="database_" + short_hash(self.database_id),
+            selected=True,
+            parallelized=True,
+            primary_key="id",
+            max_table_nesting=1,
+        )(
             database_id=self.database_id,
             column_name_projection=self.column_name_projection,
         )
-        res.name = "database_" + short_hash(self.database_id)
-        return res
 
     def __str__(self):
         return f"DatabaseResource(database_id={self.database_id})"
