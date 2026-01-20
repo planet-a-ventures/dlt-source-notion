@@ -292,10 +292,12 @@ class DatabaseResource(DatabaseResourceBase):
             self.column_name_projection = column_name_projection
 
     def get_resource(self):
-        return database_resource(
+        res = database_resource(
             database_id=self.database_id,
             column_name_projection=self.column_name_projection,
         )
+        res.name = "database_" + short_hash(self.database_id)
+        return res
 
     def __str__(self):
         return f"DatabaseResource(database_id={self.database_id})"
