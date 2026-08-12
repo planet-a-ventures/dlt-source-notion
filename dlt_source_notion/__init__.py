@@ -147,13 +147,16 @@ A function that determines the resulting column name for a given property. Retur
 def database_resource(
     database_id: str,
     column_name_projection: ColumnNameProjection,
+    table_name: str | None = None,
 ) -> Iterable[Page]:
     client = get_notion_client()
 
     db: Database = client.databases.retrieve(database_id=database_id)
 
     db_table_name = naming_convention.normalize_path(
-        "database_" + db.plain_text_title + "_" + short_hash(db.id)
+        table_name
+        if table_name is not None
+        else "database_" + db.plain_text_title + "_" + short_hash(db.id)
     )
 
     all_properties = list(db.properties.values())
@@ -279,9 +282,13 @@ class DatabaseResourceBase:
 
 class DatabaseResource(DatabaseResourceBase):
     def __init__(
-        self, database_id: str, column_name_projection: ColumnNameProjection = None
+        self,
+        database_id: str,
+        column_name_projection: ColumnNameProjection = None,
+        table_name: str | None = None,
     ):
         self.database_id = database_id
+        self.table_name = table_name
         if column_name_projection is not None:
             self.column_name_projection = column_name_projection
 
@@ -296,6 +303,7 @@ class DatabaseResource(DatabaseResourceBase):
         )(
             database_id=self.database_id,
             column_name_projection=self.column_name_projection,
+            table_name=self.table_name,
         )
 
     def __str__(self):

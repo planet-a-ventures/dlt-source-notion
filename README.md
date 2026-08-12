@@ -15,7 +15,7 @@ Currently loads the following data:
 | -- | -- |
 | `persons` | Items of the `user` model of type `person` |
 | `bots` | Items of the `user` model of type `bot` |
-| `database_<name>_<shorthash>` | The database content (pages) of a given database. Columns are all global page columns + selected columns of properties |
+| `database_<name>_<shorthash>` (or an explicit `table_name`, see below) | The database content (pages) of a given database. Columns are all global page columns + selected columns of properties |
 | `databases` | All metadata of each loaded database. Has the title and a reference to the database table as well. |
 | `databases__properties` | Column \<-> Label mapping for each unfiltered database property |
 | `options_<name>_<shorthash>` | All options of a `select` or `multi_select` in one of the loaded databases. |
@@ -56,6 +56,19 @@ pipeline = dlt.pipeline(
 )
 notion_data = notion_source()
 pipeline.run(notion_data)
+```
+
+To load a specific database under a clean, explicit table name instead of the
+default `database_<title>_<shorthash>`, pass `table_name` to `DatabaseResource`:
+
+```py
+from dlt_source_notion import source as notion_source, DatabaseResource
+
+events_db = DatabaseResource(
+    database_id="1b83e0058e9244e7b1933cce404e2a98",
+    table_name="event_database",
+)
+notion_data = notion_source(database_resources=[events_db])
 ```
 
 ## Development
