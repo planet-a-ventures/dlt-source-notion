@@ -1,10 +1,13 @@
 [project]
 name = "dlt-source-notion"
-version = "0.0.10"
+version = "0.0.11"
 description = "A DLT source for notion"
 readme = { file = "README.md", content-type = "text/markdown" }
 authors = [
     { name = "Planet A GmbH", email = "dev@planet-a.com" }
+]
+maintainers = [
+    { name = "Mehmet Celimli", email = "mehmet@planet-a.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
