@@ -257,6 +257,17 @@ def database_resource(
                         row[target_key] = prop.last_edited_time
                     case "relation":
                         row[target_key + "_relations"] = [r.id for r in prop.relation]
+                    case "url":
+                        # AnyUrl (or None, for an empty url property) — dlt already has
+                        # a custom encoder registered for AnyUrl (see anyurl_encoder above).
+                        row[target_key] = prop.url
+                    case "checkbox":
+                        row[target_key] = prop.checkbox
+                    case "status":
+                        # A status property has exactly one value (unlike select's
+                        # options-table indirection above) — store the name directly
+                        # rather than an option id needing a join.
+                        row[target_key] = prop.status.name if prop.status else None
                     case _:
                         # See https://developers.notion.com/reference/page-property-values
                         raise ValueError(

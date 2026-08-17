@@ -193,7 +193,7 @@ duckdb = [
 
 [[package]]
 name = "dlt-source-notion"
-version = "0.0.10"
+version = "0.0.12"
 source = { virtual = "." }
 dependencies = [
     { name = "dlt" },
